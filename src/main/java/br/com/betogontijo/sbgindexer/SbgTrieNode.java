@@ -1,61 +1,49 @@
 package br.com.betogontijo.sbgindexer;
 
-import br.com.betogontijo.sbgcrawler.SbgMap;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
-public class SbgTrieNode extends SbgMap<String, Object> {
+import me.lemire.integercompression.differential.IntegratedIntCompressor;
 
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = 2463008879043012732L;
-	// private HashMap<Character, SbgTrieNode> children;
-	// private String text;
-	// private boolean isWord;
+public class SbgTrieNode {
 
-	public SbgTrieNode() {
-		setChildren(new SbgMap<String, SbgTrieNode>());
-		setText("");
-		setIsWord(false);
+	private Map<Character, SbgTrieNode> children;
+	private List<int[]> invertedList;
+
+	SbgTrieNode() {
+		invertedList = new ArrayList<int[]>();
 	}
-	
-	public SbgTrieNode(boolean isSearch){
-		if(isSearch){
-			setText("");
+
+	public Map<Character, SbgTrieNode> getChildren() {
+		return this.children;
+	}
+
+	public void setChildren(Map<Character, SbgTrieNode> children) {
+		this.children = children;
+	}
+
+	public List<int[]> getInvertedList() {
+		IntegratedIntCompressor iic = new IntegratedIntCompressor();
+		List<int[]> invertedList = new ArrayList<int[]>();
+		for (int i = 0; i < this.invertedList.size(); i++) {
+			if (i % 2 == 0) {
+				invertedList.add(this.invertedList.get(i));
+			} else {
+				invertedList.add(iic.uncompress(this.invertedList.get(i)));
+			}
 		}
+		return invertedList;
 	}
 
-	public SbgTrieNode(String text) {
-		this();
-		setText(text);
-	}
-
-	@SuppressWarnings("unchecked")
-	public SbgMap<String, SbgTrieNode> getChildren() {
-		return (SbgMap<String, SbgTrieNode>) get("children");
-	}
-
-	private void setChildren(SbgMap<String, SbgTrieNode> children) {
-		put("children", children);
-	}
-
-	public String getText() {
-		return (String) get("text");
-	}
-
-	private void setText(String text) {
-		put("text", text);
-	}
-
-	public boolean isWord() {
-		return (Boolean) get("isWord");
-	}
-
-	public void setIsWord(boolean isWord) {
-		put("isWord", isWord);
-	}
-
-	@Override
-	public String toString() {
-		return getText();
+	public void setInvertedList(List<int[]> invertedList) {
+		IntegratedIntCompressor iic = new IntegratedIntCompressor();
+		for (int i = 0; i < invertedList.size(); i++) {
+			if (i % 2 == 0) {
+				this.invertedList.add(invertedList.get(i));
+			} else {
+				this.invertedList.add(iic.compress(invertedList.get(i)));
+			}
+		}
 	}
 }

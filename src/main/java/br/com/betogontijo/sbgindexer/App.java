@@ -6,6 +6,8 @@ package br.com.betogontijo.sbgindexer;
  */
 public class App {
 	public static void main(String[] args) {
-		new SbgReader().read();
+		SbgReader sbgReader = new SbgReader();
+		sbgReader.read();
+		sbgReader.getTrie().find("batata");
 	}
 }

@@ -1,6 +1,5 @@
 package br.com.betogontijo.sbgindexer;
 
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -12,16 +11,19 @@ public class SbgReader {
 
 	AtomicInteger docId = new AtomicInteger();
 
-	@SuppressWarnings("unchecked")
+	Trie trie = new Trie();
+
 	public void read() {
 		SbgDocument document;
 		while ((document = dataSource.getDocument(docId.incrementAndGet())) != null) {
-			Map<String, List<Integer>> wordMap = (Map<String, List<Integer>>) document.get("wordMap");
-			Trie trie = new Trie();
+			Map<String, int[]> wordMap = document.getWordsMap();
 			for (String word : wordMap.keySet()) {
-				trie.add(word);
+				trie.add(word, docId.get(), wordMap.get(word));
 			}
-			dataSource.addWord(trie.getRoot());
 		}
+	}
+
+	public Trie getTrie() {
+		return this.trie;
 	}
 }

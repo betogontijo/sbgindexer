@@ -1,5 +1,8 @@
 package br.com.betogontijo.sbgindexer;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -13,7 +16,7 @@ public class Trie {
 		size = 0;
 	}
 
-	public boolean add(String word) {
+	public boolean add(String word, int docId, int[] docPositions) {
 		SbgTrieNode trie = root;
 		if (trie == null || word == null)
 			return false;
@@ -21,18 +24,23 @@ public class Trie {
 		char[] chars = word.toCharArray();
 		int counter = 0;
 		while (counter < chars.length) {
-			Set<String> childs = trie.getChildren().keySet();
-			if (!childs.contains(chars[counter] + "")) {
-				insertChar(trie, chars[counter] + "");
-				if (counter == chars.length - 1) {
-					getChild(trie, chars[counter]+"").setIsWord(true);
-					size++;
-					return true;
+			if (trie.getChildren() == null) {
+				trie.setChildren(new HashMap<Character, SbgTrieNode>());
+				insertChar(trie, chars[counter]);
+			} else {
+				Set<Character> childs = trie.getChildren().keySet();
+				if (!childs.contains(chars[counter])) {
+					insertChar(trie, chars[counter]);
 				}
 			}
-			trie = getChild(trie, chars[counter]+"");
-			if (trie.getText().equals(word) && !trie.isWord()) {
-				trie.setIsWord(true);
+			trie = getChild(trie, chars[counter]);
+			if (counter == chars.length - 1) {
+				List<int[]> invertedList = new ArrayList<int[]>();
+				int[] docIdTmp = new int[1];
+				docIdTmp[0] = docId;
+				invertedList.add(docIdTmp);
+				invertedList.add(docPositions);
+				trie.setInvertedList(invertedList);
 				size++;
 				return true;
 			}
@@ -41,41 +49,51 @@ public class Trie {
 		return false;
 	}
 
-	public boolean find(String str) {
-		Map<String, SbgTrieNode> children = root.getChildren();
+	public List<int[]> find(String str) {
+		Map<Character, SbgTrieNode> children = root.getChildren();
 		SbgTrieNode t = null;
 		for (int i = 0; i < str.length(); i++) {
 			char c = str.charAt(i);
 			if (children.containsKey(c)) {
 				t = children.get(c);
-				children = t.getChildren();
-			} else
-				return false;
+				if (i == str.length() - 1) {
+					return t.getInvertedList();
+				} else {
+					children = t.getChildren();
+				}
+			} else {
+				break;
+			}
 		}
-
-		return true;
+		return null;
 	}
 
 	public boolean remove(String str) {
 		return findNode(root, str);
 	}
 
-	private SbgTrieNode getChild(SbgTrieNode trie, String c) {
+	private SbgTrieNode getChild(SbgTrieNode trie, Character c) {
 		return trie.getChildren().get(c);
 	}
 
-	private SbgTrieNode insertChar(SbgTrieNode trie, String c) {
-		if (trie.getChildren().containsKey(c)) {
-			return null;
+	private void insertChar(SbgTrieNode trie, Character c) {
+		Map<Character, SbgTrieNode> children = trie.getChildren();
+		SbgTrieNode next = null;
+		if (children == null) {
+			children = new HashMap<Character, SbgTrieNode>();
+			next = new SbgTrieNode();
+			trie.setChildren(children);
+		} else {
+			next = trie.getChildren().get(c);
+			if (next == null) {
+				next = new SbgTrieNode();
+			}
 		}
-
-		SbgTrieNode next = new SbgTrieNode(trie.getText() + c.toString());
 		trie.getChildren().put(c, next);
-		return next;
 	}
 
 	private boolean findNode(SbgTrieNode trie, String s) {
-		Map<String, SbgTrieNode> children = root.getChildren();
+		Map<Character, SbgTrieNode> children = root.getChildren();
 
 		SbgTrieNode parent = null;
 		for (int i = 0; i < s.length(); i++) {
@@ -84,7 +102,7 @@ public class Trie {
 				parent = trie;
 				trie = children.get(c);
 				children = trie.getChildren();
-				if (trie.getText().equals(s)) {
+				if (trie.equals(s)) {
 					parent.getChildren().remove(c);
 					trie = null;
 					return true;
