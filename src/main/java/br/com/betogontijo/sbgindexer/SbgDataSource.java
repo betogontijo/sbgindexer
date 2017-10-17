@@ -16,6 +16,7 @@ import com.mongodb.client.gridfs.GridFSBuckets;
 import com.mongodb.client.gridfs.GridFSUploadStream;
 
 import br.com.betogontijo.sbgcrawler.SbgDocument;
+import br.com.betogontijo.sbgindexer.mongo.collections.SbgTrieNode;
 
 public class SbgDataSource {
 	@SuppressWarnings("rawtypes")

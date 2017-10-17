@@ -24,16 +24,11 @@
 		</dependency>
 
 		<dependency>
-			<groupId>br.com.betogontijo</groupId>
-			<artifactId>SbgCrawler</artifactId>
-			<version>0.1</version>
+			<groupId>com.example</groupId>
+			<artifactId>SbgBeans</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
 		</dependency>
 
-		<dependency>
-			<groupId>me.lemire.integercompression</groupId>
-			<artifactId>JavaFastPFOR</artifactId>
-			<version>0.1.9</version>
-		</dependency>
 
 	</dependencies>
 </project>
