@@ -1,5 +1,6 @@
 package br.com.betogontijo.sbgindexer;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -14,6 +15,7 @@ public class Trie {
 
 	public Trie() {
 		root = new Node();
+		root.setChildren(new HashMap<Character, Node>());
 		size = 0;
 	}
 
@@ -36,7 +38,12 @@ public class Trie {
 			}
 			trie = getChild(trie, chars[counter]);
 			if (counter == chars.length - 1) {
-				InvertedList invertedList = new InvertedList();
+				InvertedList invertedList = trie.getInvertedList();
+				if (invertedList == null) {
+					invertedList = new InvertedList();
+					invertedList.setDocRefList(new ArrayList<Integer>());
+					invertedList.setOccurrencesList(new ArrayList<int[]>());
+				}
 				invertedList.addInvertedItem(docId, docPositions);
 				trie.setInvertedList(invertedList);
 				size++;
