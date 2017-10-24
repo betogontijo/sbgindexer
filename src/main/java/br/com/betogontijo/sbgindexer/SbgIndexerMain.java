@@ -17,10 +17,8 @@ import br.com.betogontijo.sbgbeans.crawler.repositories.SbgDocumentRepository;
 import br.com.betogontijo.sbgbeans.indexer.repositories.NodeRepository;
 
 @SpringBootApplication
-@EnableMongoRepositories("br.com.betogontijo.sbgbeans")
+@EnableMongoRepositories({ "br.com.betogontijo.sbgbeans.crawler", "br.com.betogontijo.sbgbeans.indexer" })
 public class SbgIndexerMain {
-
-	SbgIndexerDao dataSource;
 
 	@Autowired
 	SbgDocumentRepository documentRepository;
@@ -36,15 +34,21 @@ public class SbgIndexerMain {
 	@Bean
 	CommandLineRunner init(ConfigurableApplicationContext applitcationContext) {
 		return args -> {
-			dataSource = new SbgIndexerDao(documentRepository, nodeRepository);
-			SbgIndexerPerformanceMonitor monitor = new SbgIndexerPerformanceMonitor(dataSource);
-			monitor.start();
-			SbgIndexer indexer = new SbgIndexer(dataSource);
 			Properties properties = new Properties();
 			properties.load(ClassLoader.getSystemResourceAsStream("sbgindexer.properties"));
 			int threadNumber = Integer.parseInt(properties.getProperty("environment.threads"));
+			int bufferSize = Integer.parseInt(properties.getProperty("environment.buffer.size"));
+
+			SbgIndexerDao dataSource = new SbgIndexerDao(threadNumber, bufferSize, documentRepository, nodeRepository);
+
+			SbgIndexerPerformanceMonitor monitor = new SbgIndexerPerformanceMonitor(dataSource);
+			monitor.start();
+
+			SbgIndexer indexer = new SbgIndexer(dataSource);
+
 			ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(threadNumber, threadNumber, 0L,
 					TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
+
 			while (!dataSource.isCanceled()) {
 				if (threadPoolExecutor.getActiveCount() < threadNumber) {
 					threadPoolExecutor.execute(indexer);

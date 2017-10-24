@@ -20,12 +20,22 @@ public class SbgIndexerDao {
 
 	NodeRepository nodeRepository;
 
+	private SbgConcurrentMap nodeBufferMap;
+
+	private static int bufferSize;
+
+	private static int bufferPerThread;
+
 	private boolean canceled = false;
 
-	SbgIndexerDao(SbgDocumentRepository documentRepository, NodeRepository nodeRepository) {
+	public SbgIndexerDao(int threadNumber, int bufferSize, SbgDocumentRepository documentRepository,
+			NodeRepository nodeRepository) {
+		setBufferSize(bufferSize);
+		setBufferPerThread(bufferSize / threadNumber);
 		this.documentRepository = documentRepository;
 		this.nodeRepository = nodeRepository;
 		documentIdCounter = new AtomicInteger((int) nodeRepository.count());
+		setNodeBufferMap(new SbgConcurrentMap());
 	}
 
 	SbgDocument getNextDocument() {
@@ -36,23 +46,16 @@ public class SbgIndexerDao {
 		return findById;
 	}
 
-	void addWord(Node node) {
-		Node findByWord = nodeRepository.findByWord(node.getWord());
-		boolean insertNode = true;
-		if (findByWord != null) {
-			findByWord.getDocRefList().addAll(node.getDocRefList());
-			findByWord.getOccurrencesList().addAll(node.getOccurrencesList());
-			node = findByWord;
-			insertNode = false;
+	public void insertWord(Node node) {
+		getNodeBufferMap().concurrentAdd(node.getWord(), node.getDocRefList(), node.getOccurrencesList());
+		if (getNodeBufferMap().size() > getBufferSize()) {
+			try {
+				nodeRepository.insertAllNodes(getNodeBufferMap().removeMany(getBufferPerThread()));
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
-		// uncompressedIndex.getAndAdd(node.size());
-		// node.getInvertedList().compress();
-		if (insertNode) {
-			nodeRepository.upsertNode(node);
-		} else {
-			nodeRepository.updateNode(node);
-		}
-		// compressedIndex.getAndAdd(node.size());
 	}
 
 	public int getDocIdCounter() {
@@ -74,5 +77,29 @@ public class SbgIndexerDao {
 		} catch (ArithmeticException e) {
 		}
 		return ratio;
+	}
+
+	public SbgConcurrentMap getNodeBufferMap() {
+		return nodeBufferMap;
+	}
+
+	public void setNodeBufferMap(SbgConcurrentMap nodeBufferMap) {
+		this.nodeBufferMap = nodeBufferMap;
+	}
+
+	public static int getBufferSize() {
+		return bufferSize;
+	}
+
+	public static void setBufferSize(int bufferSize) {
+		SbgIndexerDao.bufferSize = bufferSize;
+	}
+
+	public static int getBufferPerThread() {
+		return bufferPerThread;
+	}
+
+	public static void setBufferPerThread(int bufferPerThread) {
+		SbgIndexerDao.bufferPerThread = bufferPerThread;
 	}
 }
