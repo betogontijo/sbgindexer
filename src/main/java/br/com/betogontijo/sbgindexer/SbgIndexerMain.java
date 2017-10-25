@@ -30,7 +30,6 @@ public class SbgIndexerMain {
 		SpringApplication.run(SbgIndexerMain.class, args);
 	}
 
-	@SuppressWarnings("deprecation")
 	@Bean
 	CommandLineRunner init(ConfigurableApplicationContext applitcationContext) {
 		return args -> {
@@ -54,7 +53,8 @@ public class SbgIndexerMain {
 					threadPoolExecutor.execute(indexer);
 				}
 			}
-			monitor.stop();
+			threadPoolExecutor.shutdown();
+			monitor.cancel();
 		};
 
 	}

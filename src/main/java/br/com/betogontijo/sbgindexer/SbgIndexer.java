@@ -22,7 +22,7 @@ public class SbgIndexer implements Runnable {
 				node.setWord(word);
 				node.getDocRefList().add(document.getId());
 				node.getOccurrencesList().add(wordMap.get(word));
-				dataSource.insertWord(node);
+				dataSource.addWord(node);
 			}
 		}
 	}

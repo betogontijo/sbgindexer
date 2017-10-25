@@ -45,6 +45,25 @@ public class SbgIndexerDao {
 		}
 		return findById;
 	}
+	
+	void addWord(Node node) {
+		Node findByWord = nodeRepository.findByWord(node.getWord());
+		boolean insertNode = true;
+		if (findByWord != null) {
+			findByWord.getDocRefList().addAll(node.getDocRefList());
+			findByWord.getOccurrencesList().addAll(node.getOccurrencesList());
+			node = findByWord;
+			insertNode = false;
+		}
+		// uncompressedIndex.getAndAdd(node.size());
+		// node.getInvertedList().compress();
+		if (insertNode) {
+			nodeRepository.upsertNode(node);
+		} else {
+			nodeRepository.updateNode(node);
+		}
+		// compressedIndex.getAndAdd(node.size());
+	}
 
 	public void insertWord(Node node) {
 		getNodeBufferMap().concurrentAdd(node.getWord(), node.getDocRefList(), node.getOccurrencesList());

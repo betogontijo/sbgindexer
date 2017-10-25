@@ -21,7 +21,7 @@ public class SbgIndexerPerformanceMonitor extends Thread {
 	public void run() {
 		double overallRate = 0;
 		double instantRate = 0;
-		double currentTime = 0;
+		double currentTime = 1;
 		int initialSize = 0;
 		int atualSize = initialSize;
 		int delayInMillis = printDelay * 1000;
