@@ -1,7 +1,9 @@
 package br.com.betogontijo.sbgindexer;
 
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantLock;
 
 import br.com.betogontijo.sbgbeans.crawler.documents.SbgDocument;
 import br.com.betogontijo.sbgbeans.crawler.repositories.SbgDocumentRepository;
@@ -45,13 +47,16 @@ public class SbgIndexerDao {
 		}
 		return findById;
 	}
-	
+
 	void addWord(Node node) {
 		Node findByWord = nodeRepository.findByWord(node.getWord());
 		boolean insertNode = true;
 		if (findByWord != null) {
-			findByWord.getDocRefList().addAll(node.getDocRefList());
-			findByWord.getOccurrencesList().addAll(node.getOccurrencesList());
+			Integer docId = node.getDocRefList().iterator().next();
+			int[] occurrences = node.getOccurrencesList().iterator().next();
+			if (findByWord.getDocRefList().add(docId)) {
+				findByWord.getOccurrencesList().add(occurrences);
+			}
 			node = findByWord;
 			insertNode = false;
 		}
@@ -66,7 +71,7 @@ public class SbgIndexerDao {
 	}
 
 	public void insertWord(Node node) {
-		getNodeBufferMap().concurrentAdd(node.getWord(), node.getDocRefList(), node.getOccurrencesList());
+		concurrentAdd(node.getWord(), node.getDocRefList(), node.getOccurrencesList());
 		if (getNodeBufferMap().size() > getBufferSize()) {
 			try {
 				nodeRepository.insertAllNodes(getNodeBufferMap().removeMany(getBufferPerThread()));
@@ -75,6 +80,21 @@ public class SbgIndexerDao {
 				e.printStackTrace();
 			}
 		}
+	}
+
+	final java.util.concurrent.locks.ReentrantLock insertingLock = new ReentrantLock();
+
+	public void concurrentAdd(String key, Set<Integer> integerList, Set<int[]> arrayList) {
+		insertingLock.lock();
+		Node node = (Node) getNodeBufferMap().get(key);
+		if (node == null) {
+			node = new Node();
+			node.setWord(key);
+			getNodeBufferMap().put(key, node);
+		}
+		node.getDocRefList().addAll(integerList);
+		node.getOccurrencesList().addAll(arrayList);
+		insertingLock.unlock();
 	}
 
 	public int getDocIdCounter() {

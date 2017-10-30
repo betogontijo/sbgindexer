@@ -18,21 +18,6 @@ public class SbgConcurrentMap extends ConcurrentHashMap<String, Node> {
 
 	final java.util.concurrent.locks.ReentrantLock removingLock = new ReentrantLock();
 
-	final java.util.concurrent.locks.ReentrantLock insertingLock = new ReentrantLock();
-
-	public void concurrentAdd(String key, List<Integer> integerList, List<int[]> arrayList) {
-		insertingLock.lock();
-		Node node = (Node) get(key);
-		if (node == null) {
-			node = new Node();
-			node.setWord(key);
-			put(key, node);
-		}
-		node.getDocRefList().addAll(integerList);
-		node.getOccurrencesList().addAll(arrayList);
-		insertingLock.unlock();
-	}
-
 	public List<Node> removeMany(int count) {
 		List<Node> nextList = new ArrayList<Node>();
 		removingLock.lock();
