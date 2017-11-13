@@ -22,7 +22,7 @@ public class SbgIndexerPerformanceMonitor extends Thread {
 		double overallRate = 0;
 		double instantRate = 0;
 		double currentTime = 1;
-		int initialSize = 0;
+		int initialSize = dataSource.getDocIdCounter();
 		int atualSize = initialSize;
 		int delayInMillis = printDelay * 1000;
 		int lastSize;
@@ -32,8 +32,8 @@ public class SbgIndexerPerformanceMonitor extends Thread {
 				atualSize = dataSource.getDocIdCounter();
 				overallRate = (atualSize - initialSize) / currentTime;
 				instantRate = (atualSize - lastSize) / printDelay;
-				System.out.printf("OverallRate: %.2fDoc/s, InstantRate: %.2fDoc/s, TotalDocs: %d\r", overallRate,
-						instantRate, atualSize);
+				System.out.printf("OverallRate: %.2fDoc/" + printDelay + "s, InstantRate: %.2fDoc/s, TotalDocs: %d\r",
+						overallRate, instantRate, atualSize);
 				Thread.sleep(delayInMillis);
 				currentTime += printDelay;
 			} catch (InterruptedException e) {

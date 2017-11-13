@@ -28,8 +28,6 @@ public class SbgIndexerDao {
 
 	private static int bufferPerThread;
 
-	private boolean canceled = false;
-
 	public SbgIndexerDao(int threadNumber, int bufferSize, SbgDocumentRepository documentRepository,
 			NodeRepository nodeRepository) {
 		setBufferSize(bufferSize);
@@ -42,9 +40,6 @@ public class SbgIndexerDao {
 
 	SbgDocument getNextDocument() {
 		SbgDocument findById = documentRepository.findById(documentIdCounter.getAndIncrement());
-		if (findById == null) {
-			setCanceled(true);
-		}
 		return findById;
 	}
 
@@ -99,14 +94,6 @@ public class SbgIndexerDao {
 
 	public int getDocIdCounter() {
 		return documentIdCounter.get();
-	}
-
-	public boolean isCanceled() {
-		return canceled;
-	}
-
-	public void setCanceled(boolean canceled) {
-		this.canceled = canceled;
 	}
 
 	public double getCompressRatio() {

@@ -48,7 +48,7 @@ public class SbgIndexerMain {
 			ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(threadNumber, threadNumber, 0L,
 					TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
 
-			while (!dataSource.isCanceled()) {
+			while (!indexer.isCanceled()) {
 				if (threadPoolExecutor.getActiveCount() < threadNumber) {
 					threadPoolExecutor.execute(indexer);
 				}

@@ -9,8 +9,11 @@ public class SbgIndexer implements Runnable {
 
 	SbgIndexerDao dataSource;
 
+	private boolean canceled;
+
 	public SbgIndexer(SbgIndexerDao dataSource) {
 		this.dataSource = dataSource;
+		canceled = false;
 	}
 
 	public void index() {
@@ -25,6 +28,7 @@ public class SbgIndexer implements Runnable {
 				dataSource.addWord(node);
 			}
 		}
+		setCanceled(true);
 	}
 
 	@Override
@@ -34,6 +38,14 @@ public class SbgIndexer implements Runnable {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+
+	public boolean isCanceled() {
+		return canceled;
+	}
+
+	public void setCanceled(boolean canceled) {
+		this.canceled = canceled;
 	}
 
 }
