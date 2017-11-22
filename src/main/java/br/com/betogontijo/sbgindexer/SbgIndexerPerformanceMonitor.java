@@ -47,5 +47,6 @@ public class SbgIndexerPerformanceMonitor extends Thread {
 	 */
 	public void cancel() {
 		running = false;
+		System.out.println("Perfomance Monitor was canceled.");
 	}
 }
