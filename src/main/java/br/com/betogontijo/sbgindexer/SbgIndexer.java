@@ -1,8 +1,9 @@
 package br.com.betogontijo.sbgindexer;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.CountDownLatch;
 
 import br.com.betogontijo.sbgbeans.crawler.documents.SbgDocument;
 import br.com.betogontijo.sbgbeans.indexer.documents.Node;
@@ -13,49 +14,44 @@ public class SbgIndexer implements Runnable {
 
 	private boolean canceled;
 
-	public SbgIndexer(SbgIndexerDao dataSource) {
+	CountDownLatch latch;
+
+	public SbgIndexer(SbgIndexerDao dataSource, CountDownLatch latch) {
 		this.dataSource = dataSource;
 		canceled = false;
+		this.latch = latch;
 	}
 
-	public void index() {
-		SbgDocument document;
-		while ((document = dataSource.getNextDocument()) != null) {
-			Map<String, int[]> wordsMap = new HashMap<String, int[]>();
-			int pos = 0;
-			for (String word : document.getWordsList()) {
-				if (!word.isEmpty()) {
-					int[] positions;
-					if (wordsMap.get(word) != null) {
-						positions = wordsMap.get(word);
-						positions = Arrays.copyOf(positions, positions.length + 1);
-						positions[positions.length - 1] = pos++;
-					} else {
-						positions = new int[1];
-						positions[0] = pos++;
-					}
-					wordsMap.put(word, positions);
+	public void index(SbgDocument document) {
+		Map<String, int[]> wordsMap = new HashMap<String, int[]>();
+		int pos = 0;
+		for (String word : document.getWordsList()) {
+			if (!word.isEmpty()) {
+				IntList positions = new IntList();
+				if (wordsMap.get(word) != null) {
+					positions.addAll(wordsMap.get(word));
 				}
-			}
-			for (String word : wordsMap.keySet()) {
-				Node node = new Node();
-				node.setWord(word);
-				Map<Integer, int[]> invertedList = new HashMap<Integer, int[]>();
-				invertedList.put(document.getId(), wordsMap.get(word));
-				node.setInvertedList(invertedList);
-				dataSource.addWord(node);
+				positions.add(pos++);
+				wordsMap.put(word, positions.toArray());
 			}
 		}
-		setCanceled(true);
+		for (Entry<String,int[]> wordMap : wordsMap.entrySet()) {
+			Node node = new Node();
+			node.setWord(wordMap.getKey());
+			Map<Integer, int[]> invertedList = new HashMap<Integer, int[]>();
+			invertedList.put(document.getId(), wordMap.getValue());
+			node.setInvertedList(invertedList);
+			dataSource.addWord(node);
+		}
 	}
 
 	@Override
 	public void run() {
-		try {
-			index();
-		} catch (Exception e) {
-			e.printStackTrace();
+		SbgDocument document = null;
+		while ((document = dataSource.getNextDocument()) != null && !isCanceled()) {
+			index(document);
 		}
+		latch.countDown();
 	}
 
 	public boolean isCanceled() {

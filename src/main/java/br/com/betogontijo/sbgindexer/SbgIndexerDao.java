@@ -1,7 +1,6 @@
 package br.com.betogontijo.sbgindexer;
 
 import java.util.Iterator;
-import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -29,10 +28,8 @@ public class SbgIndexerDao {
 			NodeRepository nodeRepository) {
 		this.documentRepository = documentRepository;
 		this.nodeRepository = nodeRepository;
-		documentIdCounter = new AtomicInteger((int) nodeRepository.count());
-		documentsIterator = documentRepository.findAll().iterator();
-		for (int i = 0; i < documentIdCounter.get(); i++)
-			documentsIterator.next();
+		documentIdCounter = new AtomicInteger(nodeRepository.getCurrentDocumentsIndexed());
+		documentsIterator = documentRepository.iterator(documentIdCounter.get());
 	}
 
 	SbgDocument getNextDocument() {
@@ -45,19 +42,23 @@ public class SbgIndexerDao {
 	}
 
 	void addWord(Node node) {
-		Node findByWord = nodeRepository.findByWord(node.getWord());
-		if (findByWord != null) {
-			for (Entry<Integer, int[]> entry : findByWord.getInvertedList().entrySet()) {
-				node.getInvertedList().put(entry.getKey(), entry.getValue());
-			}
-			nodeRepository.updateNode(node);
-		}
+		// Node findByWord = nodeRepository.findByWord(node.getWord());
+		// if (findByWord != null) {
+		// for (Entry<Integer, int[]> entry : findByWord.getInvertedList().entrySet()) {
+		// node.getInvertedList().put(entry.getKey(), entry.getValue());
+		// }
+		// nodeRepository.updateNode(node);
+		// }
 		// uncompressedIndex.getAndAdd(node.size());
 		// node.getInvertedList().compress();
-		else {
-			nodeRepository.upsertNode(node);
-		}
+		// else {
+		nodeRepository.upsertNode(node);
+		// }
 		// compressedIndex.getAndAdd(node.size());
+	}
+
+	public boolean saveIndexedDocumentsNumber() {
+		return nodeRepository.saveDocumentsIndexed(getDocIdCounter());
 	}
 
 	public int getDocIdCounter() {

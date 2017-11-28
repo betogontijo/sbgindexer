@@ -1,9 +1,12 @@
 package br.com.betogontijo.sbgindexer;
 
 import java.util.Properties;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+
+import javax.annotation.PreDestroy;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
@@ -26,6 +29,14 @@ public class SbgIndexerMain {
 	@Autowired
 	NodeRepository nodeRepository;
 
+	SbgIndexerDao dataSource;
+
+	SbgIndexer indexer;
+
+	ThreadPoolExecutor threadPoolExecutor;
+
+	SbgIndexerPerformanceMonitor monitor;
+
 	public static void main(String[] args) {
 		SpringApplication.run(SbgIndexerMain.class, args);
 	}
@@ -38,25 +49,46 @@ public class SbgIndexerMain {
 			int threadNumber = Integer.parseInt(properties.getProperty("environment.threads"));
 			int bufferSize = Integer.parseInt(properties.getProperty("environment.buffer.size"));
 
-			SbgIndexerDao dataSource = new SbgIndexerDao(threadNumber, bufferSize, documentRepository, nodeRepository);
+			dataSource = new SbgIndexerDao(threadNumber, bufferSize, documentRepository, nodeRepository);
 
-			SbgIndexerPerformanceMonitor monitor = new SbgIndexerPerformanceMonitor(dataSource);
+			monitor = new SbgIndexerPerformanceMonitor(dataSource);
 			monitor.start();
 
-			SbgIndexer indexer = new SbgIndexer(dataSource);
+			threadPoolExecutor = new ThreadPoolExecutor(threadNumber, threadNumber, 0L, TimeUnit.MILLISECONDS,
+					new LinkedBlockingQueue<Runnable>());
+			CountDownLatch latch = new CountDownLatch(threadNumber);
 
-			ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(threadNumber, threadNumber, 0L,
-					TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
-
-			while (!indexer.isCanceled()) {
-				if (threadPoolExecutor.getActiveCount() < threadNumber) {
-					threadPoolExecutor.execute(indexer);
-				}
+			indexer = new SbgIndexer(dataSource, latch);
+			while (threadPoolExecutor.getActiveCount() < threadNumber) {
+				threadPoolExecutor.execute(indexer);
 			}
-			threadPoolExecutor.shutdown();
+			latch.await();
 			monitor.cancel();
 		};
 
+	}
+
+	@PreDestroy
+	public void onDestroy() {
+		System.out.println("Waiting all indexers to end...");
+		indexer.setCanceled(true);
+		monitor.cancel();
+		try {
+			boolean awaitTermination = threadPoolExecutor.awaitTermination(1, TimeUnit.MINUTES);
+			if (awaitTermination) {
+				System.out.println("All collectors have finished.");
+			} else {
+				System.out.println("Collectors was forced finishing, timeout reached.");
+			}
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		System.out.println("Shutting down...");
+		boolean isSaved = dataSource.saveIndexedDocumentsNumber();
+		System.out.println("Current count of indexed documents saved? (" + isSaved + ").");
+		threadPoolExecutor.shutdown();
+		System.out.println("Shutdown.");
 	}
 
 }
