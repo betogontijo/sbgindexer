@@ -2,8 +2,10 @@ package br.com.betogontijo.sbgindexer;
 
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantLock;
+
+import org.springframework.dao.DataIntegrityViolationException;
 
 import br.com.betogontijo.sbgbeans.crawler.documents.SbgDocument;
 import br.com.betogontijo.sbgbeans.crawler.repositories.SbgDocumentRepository;
@@ -16,7 +18,7 @@ public class SbgIndexerDao {
 
 	AtomicLong compressedIndex = new AtomicLong();
 
-	AtomicInteger documentIdCounter;
+	int documentIdCounter = 3378;
 
 	SbgDocumentRepository documentRepository;
 
@@ -24,37 +26,35 @@ public class SbgIndexerDao {
 
 	Iterator<SbgDocument> documentsIterator;
 
+	final ReentrantLock lock = new ReentrantLock();
+
 	public SbgIndexerDao(int threadNumber, int bufferSize, SbgDocumentRepository documentRepository,
 			NodeRepository nodeRepository) {
 		this.documentRepository = documentRepository;
 		this.nodeRepository = nodeRepository;
-		documentIdCounter = new AtomicInteger(nodeRepository.getCurrentDocumentsIndexed());
-		documentsIterator = documentRepository.iterator(documentIdCounter.get());
+		// documentIdCounter = nodeRepository.getCurrentDocumentsIndexed();
+		documentsIterator = documentRepository.iterator(documentIdCounter);
 	}
 
 	SbgDocument getNextDocument() {
 		try {
-			documentIdCounter.getAndIncrement();
+			documentIdCounter++;
+			lock.lock();
 			return documentsIterator.next();
 		} catch (NoSuchElementException e) {
 			return null;
+		} finally {
+			lock.unlock();
 		}
 	}
 
 	void addWord(Node node) {
-		// Node findByWord = nodeRepository.findByWord(node.getWord());
-		// if (findByWord != null) {
-		// for (Entry<Integer, int[]> entry : findByWord.getInvertedList().entrySet()) {
-		// node.getInvertedList().put(entry.getKey(), entry.getValue());
-		// }
-		// nodeRepository.updateNode(node);
-		// }
-		// uncompressedIndex.getAndAdd(node.size());
-		// node.getInvertedList().compress();
-		// else {
-		nodeRepository.upsertNode(node);
-		// }
-		// compressedIndex.getAndAdd(node.size());
+		node.compress();
+		try {
+			nodeRepository.upsertNode(node);
+		} catch (DataIntegrityViolationException e) {
+			// Too much caracteres in word
+		}
 	}
 
 	public boolean saveIndexedDocumentsNumber() {
@@ -62,6 +62,6 @@ public class SbgIndexerDao {
 	}
 
 	public int getDocIdCounter() {
-		return documentIdCounter.get();
+		return documentIdCounter;
 	}
 }
